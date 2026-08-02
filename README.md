@@ -1,78 +1,56 @@
 # OhMyMail
 
-A professional email template composer with live preview, Markdown editing, and full branding customization. All data stays local — no backend required.
+> A professional email template composer. Write in Markdown, preview live, and brand every detail — all local, no backend required.
+
+OhMyMail is a single-page email template composer for developers and marketers who need polished, on-brand emails without a SaaS account. You write Markdown in a split-pane editor with a live HTML preview, add structure with slash commands, customize the branding (colors, fonts, header and footer), and export a self-contained HTML email, raw Markdown, or a PDF. All state lives in the browser's `localStorage`.
 
 ## Features
 
 - **Split-pane editor** — Markdown on the left, rendered email preview on the right, with a draggable divider
-- **Slash commands** — Type `/` to insert headings, buttons, dividers, badges, links, images, headers, footers, and more with fuzzy search
-- **Branding panel** — Set company name, logo, colors, fonts (Google Fonts supported), and corner radii for header/footer/body
-- **Template management** — Save, load, duplicate, rename, and delete named templates (stored in localStorage)
-- **Export** — Download as self-contained HTML, raw Markdown, or PDF (browser print)
-- **Auto-save** — Drafts persist automatically to localStorage
+- **Two editing modes** — a guided block editor (sortable blocks with `@dnd-kit`) or a pure Markdown text editor; both support slash commands with fuzzy search
+- **Slash commands** — type `/` to insert headings, buttons, dividers, badges, links, images, GIFs, inline icons (with picker), headers, footers, branding blocks, font overrides, spacers, columns and social links
+- **Branding panel** — company name, logo URL, primary and accent colors, Google Fonts family and size, plus independent colors and corner radii for header, footer and body
+- **Template management** — save, load, duplicate, rename and delete named templates, stored locally
+- **Export** — self-contained HTML email (inline CSS via `juice`, `Ctrl+Shift+E`), raw Markdown, or PDF through the browser print dialog (`Ctrl+P`)
+- **Auto-save** — the current draft persists automatically to `localStorage` (`mailforge_autosave`), along with title, templates and branding config
+- **Keyboard shortcuts** — `Ctrl+S` saves a template, `Ctrl+Shift+E` exports HTML, `Ctrl+P` exports PDF, `Tab` inserts an indent
 
-## Tech Stack
+## Tech stack
 
-- React 19 + TypeScript
-- Vite 8 with React Compiler
-- Tailwind CSS v4
-- `marked` for Markdown-to-HTML conversion
-- `lucide-react` for icons
-- Oxc-based linting (ESLint + oxlint)
+- React 19 + TypeScript (strict) with the React Compiler
+- Vite
+- TailwindCSS v4
+- `marked` (Markdown to HTML)
+- `juice` (CSS inlining for email-safe output)
+- `@dnd-kit` (sortable blocks)
+- `lucide-react` (icons)
+- `nanoid` (identifiers)
+- ESLint + OxLint, Husky + Commitlint
 
-## Getting Started
+## Getting started
+
+Requires [Bun](https://bun.sh).
 
 ```bash
-# Install dependencies (uses Bun)
 bun install
-
-# Start dev server
 bun dev
-
-# Build for production
-bun run build
-
-# Preview production build
-bun preview
 ```
 
-Dev server runs at `http://localhost:5173` by default.
+Open [http://localhost:5173](http://localhost:5173).
 
-## Keyboard Shortcuts
+## Scripts
 
-| Shortcut | Action |
-|---|---|
-| `Ctrl+S` | Save as template |
-| `Ctrl+Shift+E` | Export HTML |
-| `Ctrl+P` | Export PDF (print dialog) |
-| `Tab` | Insert 2-space indent in editor |
+| Script              | Description                       |
+| ------------------- | --------------------------------- |
+| `bun dev`           | Start the Vite dev server         |
+| `bun run build`     | Type-check and build to `dist/`   |
+| `bun run lint`      | Run ESLint                        |
+| `bun run preview`   | Preview the production build      |
 
-## Slash Commands
+## License
 
-Type `/` in the editor to open the command palette. Available commands:
+Apache-2.0
 
-| Command | Inserts |
-|---|---|
-| `/h1`, `/h2`, `/h3` | Headings |
-| `/button` | Call-to-action button |
-| `/divider` | Horizontal rule |
-| `/badge` | Inline badge/label |
-| `/link` | Hyperlink |
-| `/image` | Image block |
-| `/gif` | Animated GIF |
-| `/icon` | Inline icon (with picker) |
-| `/header` | Email header block |
-| `/footer` | Email footer block |
-| `/branding` | Company branding block |
-| `/font` | Font override |
+---
 
-## Storage
-
-All data is persisted to `localStorage` under these keys:
-
-| Key | Contents |
-|---|---|
-| `mailforge_autosave` | Current editor content |
-| `mailforge_title` | Current email title |
-| `mailforge_templates` | Saved templates (JSON array) |
-| `mailforge_branding` | Branding configuration (JSON) |
+Part of the OhMy suite: OhMyForms, OhMyDocs, OhMyMail, OhMyGrid, OhMyCharts, OhMyGantt. A family of small, focused web tools with a browser-only philosophy.
