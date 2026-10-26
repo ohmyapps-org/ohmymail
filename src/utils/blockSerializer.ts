@@ -1,14 +1,18 @@
 import { nanoid } from 'nanoid';
 import type {
   Block, BlockId, BlockType,
-  MarkdownBlock, HeaderBlock, ImageBlock,
+  MarkdownBlock, HeaderBlock, FooterBlock, ImageBlock,
   IconBlock, FontBlock, SocialBlock, InlineBlock, SocialLink,
 } from '../types';
+import { DIVIDER_COLOR } from '../constants';
+import { normalizeHex } from '../utils';
 
 // ── Serializer ────────────────────────────────────────────────
 
 function serializeProps(block: Omit<Block, 'id' | 'type'>): string {
   return Object.entries(block)
+    // undefined = "follow the branding theme"; leave the key out so it round-trips as inherited
+    .filter(([, v]) => v !== undefined)
     .map(([k, v]) => {
       if (Array.isArray(v)) return `${k}: ${JSON.stringify(v)}`;
       if (typeof v === 'string') return `${k}: "${v}"`;
@@ -59,6 +63,18 @@ function parseProps(lines: string[]): Record<string, unknown> {
   return result;
 }
 
+/** Optional string prop: absent in the source means "inherit from the theme". */
+function optString(v: unknown): string | undefined {
+  return v === undefined ? undefined : String(v);
+}
+
+/** Normalizes legacy persisted data (e.g. rgba() divider colors) to the current schema. */
+export function migrateBlocks(blocks: Block[]): Block[] {
+  return blocks.map(b => b.type === 'divider'
+    ? { ...b, color: normalizeHex(b.color, DIVIDER_COLOR) }
+    : b);
+}
+
 function buildBlock(type: BlockType, props: Record<string, unknown>): Block {
   const id = newId();
 
@@ -66,18 +82,22 @@ function buildBlock(type: BlockType, props: Record<string, unknown>): Block {
     case 'header':
       return {
         id, type: 'header',
-        logoUrl: String(props.logoUrl ?? ''),
-        bg:      String(props.bg      ?? '#0F2854'),
-        height:  Number(props.height  ?? 80),
-        radius:  String(props.radius  ?? '0'),
-        align:   (props.align as HeaderBlock['align']) ?? 'center',
+        logoUrl:   String(props.logoUrl ?? ''),
+        title:     optString(props.title),
+        bg:        optString(props.bg),
+        textColor: optString(props.textColor),
+        height:    Number(props.height ?? 80),
+        radius:    optString(props.radius),
+        align:     (props.align as HeaderBlock['align']) ?? 'center',
       };
     case 'footer':
       return {
         id, type: 'footer',
-        bg:        String(props.bg        ?? '#0F2854'),
-        text:      String(props.text      ?? ''),
-        textColor: String(props.textColor ?? '#BDE8F5'),
+        bg:        optString(props.bg),
+        text:      String(props.text ?? ''),
+        textColor: optString(props.textColor),
+        radius:    optString(props.radius),
+        align:     props.align as FooterBlock['align'],
       };
     case 'badge':
       return {
@@ -85,13 +105,13 @@ function buildBlock(type: BlockType, props: Record<string, unknown>): Block {
         label:    String(props.label    ?? 'Badge'),
         color:    String(props.color    ?? '#1D4ED8'),
         bg:       String(props.bg       ?? '#EFF6FF'),
-        radius:   String(props.radius   ?? '999px'),
+        radius:   optString(props.radius),
         fontSize: String(props.fontSize ?? '12px'),
       };
     case 'divider':
       return {
         id, type: 'divider',
-        color:     String(props.color     ?? 'rgba(0,0,0,0.1)'),
+        color:     normalizeHex(String(props.color ?? DIVIDER_COLOR), DIVIDER_COLOR),
         thickness: Number(props.thickness ?? 1),
         margin:    String(props.margin    ?? '24px 0'),
       };
@@ -102,7 +122,7 @@ function buildBlock(type: BlockType, props: Record<string, unknown>): Block {
         alt:    String(props.alt    ?? ''),
         width:  String(props.width  ?? '100%'),
         align:  (props.align as ImageBlock['align']) ?? 'center',
-        radius: String(props.radius ?? '0'),
+        radius: optString(props.radius),
       };
     case 'button':
       return {
@@ -111,7 +131,7 @@ function buildBlock(type: BlockType, props: Record<string, unknown>): Block {
         href:     String(props.href     ?? '#'),
         bg:       String(props.bg       ?? '#4988C4'),
         color:    String(props.color    ?? '#ffffff'),
-        radius:   String(props.radius   ?? '6px'),
+        radius:   optString(props.radius),
         fontSize: String(props.fontSize ?? '15px'),
       };
     case 'icon':

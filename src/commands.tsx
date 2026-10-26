@@ -4,11 +4,8 @@ import {
 } from 'lucide-react';
 import type { BrandingConfig, SlashCommandDef } from './types';
 import { CUSTOM_TAG_COMMANDS } from './config/app.config';
-import { concentricRadius } from './utils';
-
-// Padding values used when generating block HTML — also used in SettingsPanel previews.
-export const HEADER_PADDING = 24;
-export const FOOTER_PADDING = 16;
+import { concentricRadius, componentRadius } from './utils';
+import { HEADER_PADDING, FOOTER_PADDING } from './constants';
 
 function builtinCommands(b: BrandingConfig): SlashCommandDef[] {
   const logo = b.logoUrl || 'https://placehold.co/120x40/0F2854/BDE8F5?text=Logo';
@@ -52,7 +49,7 @@ function builtinCommands(b: BrandingConfig): SlashCommandDef[] {
       id: 'header', label: 'Email Header', description: 'Branded header block', icon: <AlignLeft size={14} />,
       insert: () => {
         // outer = inner + padding — inner corners of the content appear with headerRadius rounding
-        const r = concentricRadius(b.headerRadius, HEADER_PADDING);
+        const r = concentricRadius(componentRadius(b, 'headerRadius'), HEADER_PADDING);
         return `<div class="email-header" style="background:${b.headerBg};padding:${HEADER_PADDING}px;text-align:center;border-radius:${r}px ${r}px 0 0;">
   <img src="${logo}" alt="Logo" style="height:40px;margin-bottom:8px;" />
   <h1 style="color:${b.headerText};font-size:22px;margin:0;">${co}</h1>
@@ -62,7 +59,7 @@ function builtinCommands(b: BrandingConfig): SlashCommandDef[] {
     {
       id: 'footer', label: 'Email Footer', description: 'Branded footer block', icon: <AlignLeft size={14} />,
       insert: () => {
-        const r = concentricRadius(b.footerRadius, FOOTER_PADDING);
+        const r = concentricRadius(componentRadius(b, 'footerRadius'), FOOTER_PADDING);
         return `<div class="email-footer" style="background:${b.footerBg};padding:${FOOTER_PADDING}px;text-align:center;font-size:12px;color:${b.footerText};border-radius:0 0 ${r}px ${r}px;margin-top:24px;">
   © ${year} ${co} · Unsubscribe · Privacy Policy
   <br/><span style="opacity:0.5;">Built with MailForge by Eternum · Apache 2.0</span>

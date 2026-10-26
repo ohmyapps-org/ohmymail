@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { BrandingConfig } from '../types';
-import { GOOGLE_FONTS, FONT_LABELS, FONT_SIZE_MAP } from '../constants';
-import { extractFontNameFromUrl, getActiveFontFamily, concentricRadius } from '../utils';
-import { HEADER_PADDING, FOOTER_PADDING } from '../commands';
+import { GOOGLE_FONTS, FONT_LABELS, FONT_SIZE_MAP, HEADER_PADDING, FOOTER_PADDING } from '../constants';
+import { extractFontNameFromUrl, getActiveFontFamily, getFontStacks, concentricRadius, componentRadius } from '../utils';
 
 // Shared input style
 const INPUT: React.CSSProperties = {
@@ -42,7 +41,7 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
 function RadiusRow({ label, value, padding, previewBg, onChange }: {
   label:     string;
   value:     number;
-  /** Element's content padding — used to compute outer CSS radius via concentric rule */
+  /** Element's content padding — used to compute outer CSS radius via concentric rule (0 = leaf element, no rule) */
   padding:   number;
   previewBg: string;
   onChange:  (v: number) => void;
@@ -54,7 +53,7 @@ function RadiusRow({ label, value, padding, previewBg, onChange }: {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
         <div style={LABEL}>{label}</div>
         <span style={{ fontSize:10, color:'#4a7890', fontFamily:'monospace' }}>
-          inner {value}px → outer {outerRadius}px
+          {padding > 0 ? `inner ${value}px → outer ${outerRadius}px` : `${value}px`}
         </span>
       </div>
 
@@ -85,7 +84,49 @@ function RadiusRow({ label, value, padding, previewBg, onChange }: {
   );
 }
 
-type Tab = 'identity' | 'header' | 'footer' | 'body';
+/** A component radius that either follows the global corner radius or carries its own value. */
+function ComponentRadiusRow({ label, value, global, padding, previewBg, onChange }: {
+  label:     string;
+  value:     number | null;
+  global:    number;
+  padding:   number;
+  previewBg: string;
+  onChange:  (v: number | null) => void;
+}) {
+  return (
+    <div style={{ marginBottom:8 }}>
+      <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', color:'#ddeeff', fontSize:12, marginBottom:value === null ? 0 : 10 }}>
+        <input type="checkbox" checked={value === null} onChange={e => onChange(e.target.checked ? null : global)} style={{ accentColor:'#4988C4' }}/>
+        <span style={{ fontWeight:600 }}>{label}</span>
+        <span style={{ marginLeft:'auto', fontSize:10, color:'#4a7890', fontFamily:'monospace' }}>
+          {value === null ? `global · ${global}px` : 'custom'}
+        </span>
+      </label>
+      {value !== null && <RadiusRow label="Corner Radius" value={value} padding={padding} previewBg={previewBg} onChange={onChange}/>}
+    </div>
+  );
+}
+
+/** Font for one typographic role: a family name (loaded from Google Fonts) and/or a Google Fonts URL. */
+function FontRoleField({ label, name, url, placeholder, onChange }: {
+  label:       string;
+  name:        string;
+  url:         string;
+  placeholder: string;
+  onChange:    (name: string, url: string) => void;
+}) {
+  return (
+    <Field label={label}>
+      <input value={name} onChange={e => onChange(e.target.value, url)} style={INPUT} placeholder={placeholder}/>
+      <input value={url}
+        onChange={e => onChange(extractFontNameFromUrl(e.target.value) || name, e.target.value)}
+        style={{ ...INPUT, marginTop:6, fontFamily:'monospace', fontSize:11 }} placeholder="Google Fonts URL (optional, sets weights)"/>
+      {url.trim() && !name.trim() && <div style={{ marginTop:5, fontSize:11, color:'#d4904a' }}>Could not detect font name — enter it above</div>}
+    </Field>
+  );
+}
+
+type Tab = 'identity' | 'header' | 'footer' | 'body' | 'corners';
 
 export default function SettingsPanel({ branding, onChange, onClose, visible }: {
   branding: BrandingConfig;
@@ -101,6 +142,7 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
     { id:'header',   label:'Header'   },
     { id:'footer',   label:'Footer'   },
     { id:'body',     label:'Body'     },
+    { id:'corners',  label:'Corners'  },
   ];
 
   return (
@@ -167,7 +209,17 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
           </Field>
           <Field label="Custom Font Name (override)">
             <input value={branding.customFontName} onChange={e => set({ customFontName:e.target.value })} style={INPUT} placeholder="e.g. Roboto Condensed"/>
+            <div style={{ marginTop:5, fontSize:11, color:'#4a7890' }}>Without a URL, the name is loaded from Google Fonts.</div>
           </Field>
+
+          <div style={{ height:1, background:'#1e3a5a', margin:'16px 0' }}/>
+          <div style={{ ...LABEL, marginBottom:10 }}>Typography by role (empty = text font)</div>
+          <FontRoleField label="Headings" name={branding.headingFontName} url={branding.headingFontUrl} placeholder="e.g. Playfair Display"
+            onChange={(n, u) => set({ headingFontName:n, headingFontUrl:u })}/>
+          <FontRoleField label="Quotes" name={branding.quoteFontName} url={branding.quoteFontUrl} placeholder="e.g. Lora"
+            onChange={(n, u) => set({ quoteFontName:n, quoteFontUrl:u })}/>
+          <FontRoleField label="Monospace (code)" name={branding.monoFontName} url={branding.monoFontUrl} placeholder="e.g. JetBrains Mono"
+            onChange={(n, u) => set({ monoFontName:n, monoFontUrl:u })}/>
 
           <div style={{ height:1, background:'#1e3a5a', margin:'16px 0' }}/>
 
@@ -193,6 +245,12 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
             <div style={{ fontSize:11, color:'#4a7890' }}>
               {getActiveFontFamily(branding)} · {branding.fontSize} · {FONT_SIZE_MAP[branding.fontSize]}
             </div>
+            <div style={{ marginTop:10, color:'#ddeeff', fontFamily:getFontStacks(branding).text, fontSize:FONT_SIZE_MAP[branding.fontSize] }}>
+              <div style={{ fontFamily:getFontStacks(branding).heading, fontSize:18, fontWeight:700, marginBottom:4 }}>Heading sample</div>
+              <div style={{ marginBottom:4 }}>Body text sample</div>
+              <div style={{ fontFamily:getFontStacks(branding).quote, borderLeft:`3px solid ${branding.primaryColor}`, paddingLeft:8, marginBottom:4 }}>Quote sample</div>
+              <code style={{ fontFamily:getFontStacks(branding).mono, fontSize:12 }}>const code = true;</code>
+            </div>
           </div>
         </>}
 
@@ -200,10 +258,10 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
         {tab === 'header' && <>
           <ColorRow label="Background Color" value={branding.headerBg} onChange={v => set({ headerBg:v })}/>
           <ColorRow label="Text Color"        value={branding.headerText} onChange={v => set({ headerText:v })}/>
-          <RadiusRow label="Corner Radius" value={branding.headerRadius} padding={HEADER_PADDING} previewBg={branding.headerBg} onChange={v => set({ headerRadius:v })}/>
+          <div style={{ fontSize:11, color:'#4a7890', marginBottom:8 }}>Corners are configured in the Corners tab.</div>
           {/* Live preview */}
-          <div style={{ marginTop:12, borderRadius:`${concentricRadius(branding.headerRadius, HEADER_PADDING)}px ${concentricRadius(branding.headerRadius, HEADER_PADDING)}px 0 0`, background:branding.headerBg, padding:16, textAlign:'center', transition:'all 0.15s' }}>
-            <div style={{ color:branding.headerText, fontSize:14, fontWeight:700 }}>{branding.companyName || 'Your Company'}</div>
+          <div style={{ marginTop:12, borderRadius:`${concentricRadius(componentRadius(branding, 'headerRadius'), HEADER_PADDING)}px ${concentricRadius(componentRadius(branding, 'headerRadius'), HEADER_PADDING)}px 0 0`, background:branding.headerBg, padding:16, textAlign:'center', transition:'all 0.15s' }}>
+            <div style={{ color:branding.headerText, fontSize:14, fontWeight:700, fontFamily:getFontStacks(branding).heading }}>{branding.companyName || 'Your Company'}</div>
             <div style={{ color:branding.headerText, fontSize:11, opacity:0.6, marginTop:2 }}>Header preview</div>
           </div>
         </>}
@@ -212,9 +270,9 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
         {tab === 'footer' && <>
           <ColorRow label="Background Color" value={branding.footerBg} onChange={v => set({ footerBg:v })}/>
           <ColorRow label="Text Color"        value={branding.footerText} onChange={v => set({ footerText:v })}/>
-          <RadiusRow label="Corner Radius" value={branding.footerRadius} padding={FOOTER_PADDING} previewBg={branding.footerBg} onChange={v => set({ footerRadius:v })}/>
+          <div style={{ fontSize:11, color:'#4a7890', marginBottom:8 }}>Corners are configured in the Corners tab.</div>
           {/* Live preview */}
-          <div style={{ marginTop:12, borderRadius:`0 0 ${concentricRadius(branding.footerRadius, FOOTER_PADDING)}px ${concentricRadius(branding.footerRadius, FOOTER_PADDING)}px`, background:branding.footerBg, padding:'12px 16px', textAlign:'center', transition:'all 0.15s' }}>
+          <div style={{ marginTop:12, borderRadius:`0 0 ${concentricRadius(componentRadius(branding, 'footerRadius'), FOOTER_PADDING)}px ${concentricRadius(componentRadius(branding, 'footerRadius'), FOOTER_PADDING)}px`, background:branding.footerBg, padding:'12px 16px', textAlign:'center', transition:'all 0.15s' }}>
             <div style={{ color:branding.footerText, fontSize:12 }}>© {new Date().getFullYear()} {branding.companyName || 'Your Company'}</div>
             <div style={{ color:branding.footerText, fontSize:10, opacity:0.5, marginTop:3 }}>Built with MailForge by Eternum</div>
           </div>
@@ -232,6 +290,20 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
             </div>
             <div style={{ fontSize:12, color:branding.bodyText, opacity:0.6 }}>Font size: {FONT_SIZE_MAP[branding.fontSize]}</div>
           </div>
+        </>}
+
+        {/* ── CORNERS ──────────────────────────────────────── */}
+        {tab === 'corners' && <>
+          <RadiusRow label="Global Corner Radius" value={branding.cornerRadius} padding={0} previewBg={branding.primaryColor} onChange={v => set({ cornerRadius:v })}/>
+          <div style={{ fontSize:11, color:'#4a7890', marginBottom:14 }}>
+            Every component follows the global radius unless you give it its own. Header and footer use concentric corners (outer = inner + padding).
+          </div>
+          <div style={{ height:1, background:'#1e3a5a', margin:'4px 0 16px' }}/>
+          <ComponentRadiusRow label="Header" value={branding.headerRadius} global={branding.cornerRadius} padding={HEADER_PADDING} previewBg={branding.headerBg}     onChange={v => set({ headerRadius:v })}/>
+          <ComponentRadiusRow label="Footer" value={branding.footerRadius} global={branding.cornerRadius} padding={FOOTER_PADDING} previewBg={branding.footerBg}     onChange={v => set({ footerRadius:v })}/>
+          <ComponentRadiusRow label="Button" value={branding.buttonRadius} global={branding.cornerRadius} padding={0}              previewBg={branding.primaryColor}  onChange={v => set({ buttonRadius:v })}/>
+          <ComponentRadiusRow label="Badge"  value={branding.badgeRadius}  global={branding.cornerRadius} padding={0}              previewBg={branding.primaryColor}  onChange={v => set({ badgeRadius:v })}/>
+          <ComponentRadiusRow label="Image"  value={branding.imageRadius}  global={branding.cornerRadius} padding={0}              previewBg="#6a99bb"                onChange={v => set({ imageRadius:v })}/>
         </>}
 
       </div>

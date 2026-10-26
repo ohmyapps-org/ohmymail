@@ -1,7 +1,8 @@
 import { marked } from 'marked';
 import juice from 'juice';
 import { APP_CONFIG } from '../config/app.config';
-import { ICON_SVGS } from '../constants';
+import { ICON_SVGS, FONT_SIZE_MAP, FOOTER_PADDING, HEADER_PADDING, DIVIDER_COLOR } from '../constants';
+import { escapeHtml, getFontStacks, getFontUrls, normalizeHex, resolveFooterStyle, resolveHeaderStyle, resolveRadius } from '../utils';
 import type {
   Block, BrandingConfig,
   MarkdownBlock, HeaderBlock, FooterBlock, BadgeBlock, DividerBlock,
@@ -36,44 +37,44 @@ function renderIconSvg(name: string, size: number, color: string): string {
 
 function renderMarkdown(block: MarkdownBlock, branding: BrandingConfig): string {
   const html = String(marked.parse(block.content));
-  return `<div style="font-family:'${branding.customFontName || branding.font}',sans-serif;font-size:16px;color:${branding.bodyText};background:${branding.bodyBg};padding:0 0 8px;line-height:1.7;">${html}</div>`;
+  const fontSize = FONT_SIZE_MAP[branding.fontSize] ?? FONT_SIZE_MAP.medium;
+  return `<div style="font-family:${getFontStacks(branding).text};font-size:${fontSize};color:${branding.bodyText};background:${branding.bodyBg};padding:0 0 8px;line-height:1.7;">${html}</div>`;
 }
 
-function renderHeader(block: HeaderBlock): string {
+function renderHeader(block: HeaderBlock, branding: BrandingConfig): string {
+  const { bg, textColor, radius, innerRadius } = resolveHeaderStyle(block, branding);
   const img = block.logoUrl
-    ? `<img src="${block.logoUrl}" alt="Logo" style="height:${block.height}px;display:block;margin:0 auto;" />`
+    ? `<img src="${block.logoUrl}" alt="Logo" style="height:${block.height}px;display:inline-block;border-radius:${innerRadius};" />`
     : '';
-  // Use min() so radius never exceeds a sane fraction of the element height (responsive)
-  const radius = block.radius.includes('min(') ? block.radius : `min(${block.radius}, ${Math.round(block.height / 2)}px)`;
-  return `<div style="background:${block.bg};padding:24px;text-align:${block.align};border-radius:${radius};">${img}</div>`;
+  const title = block.title?.trim()
+    ? `<div style="color:${textColor};font-family:${getFontStacks(branding).heading};font-size:22px;font-weight:700;margin-top:${img ? 8 : 0}px;">${escapeHtml(block.title.trim())}</div>`
+    : '';
+  return `<div style="background:${bg};padding:${HEADER_PADDING}px;text-align:${block.align};border-radius:${radius};">${img}${title}</div>`;
 }
 
-function renderFooter(block: FooterBlock): string {
+function renderFooter(block: FooterBlock, branding: BrandingConfig): string {
+  const { bg, textColor, radius } = resolveFooterStyle(block, branding);
   // Inject inline color on <p>/<a> tags so CSS class rules (like .mf-b p) cannot override them
   const html = String(marked.parse(block.text))
-    .replace(/<p>/g, `<p style="margin:4px 0;color:${block.textColor};">`)
-    .replace(/<a /g, `<a style="color:${block.textColor};" `);
-  const radius = (block as FooterBlock & { radius?: string }).radius
-    ? `border-radius:${(block as FooterBlock & { radius?: string }).radius};`
-    : '';
-  const align = (block as FooterBlock & { align?: string }).align ?? 'center';
-  return `<div style="background:${block.bg};color:${block.textColor};padding:16px 24px;text-align:${align};font-size:12px;${radius}">${html}</div>`;
+    .replace(/<p>/g, `<p style="margin:4px 0;color:${textColor};">`)
+    .replace(/<a /g, `<a style="color:${textColor};" `);
+  return `<div style="background:${bg};color:${textColor};padding:${FOOTER_PADDING}px 24px;text-align:${block.align ?? 'center'};font-size:12px;border-radius:${radius};">${html}</div>`;
 }
 
-function renderBadge(block: BadgeBlock): string {
-  return `<div style="padding:4px 0;"><span style="display:inline-block;background:${block.bg};color:${block.color};border-radius:${block.radius};font-size:${block.fontSize};padding:2px 10px;font-weight:600;">${block.label}</span></div>`;
+function renderBadge(block: BadgeBlock, branding: BrandingConfig): string {
+  return `<div style="padding:4px 0;"><span style="display:inline-block;background:${block.bg};color:${block.color};border-radius:${resolveRadius(block.radius, branding, 'badgeRadius')};font-size:${block.fontSize};padding:2px 10px;font-weight:600;">${block.label}</span></div>`;
 }
 
 function renderDivider(block: DividerBlock): string {
-  return `<hr style="border:none;border-top:${block.thickness}px solid ${block.color};margin:${block.margin};" />`;
+  return `<hr style="border:none;border-top:${block.thickness}px solid ${normalizeHex(block.color, DIVIDER_COLOR)};margin:${block.margin};" />`;
 }
 
-function renderImage(block: ImageBlock): string {
-  return `<div style="text-align:${block.align};padding:8px 0;"><img src="${block.src}" alt="${block.alt}" style="width:${block.width};border-radius:${block.radius};display:inline-block;max-width:100%;height:auto;" /></div>`;
+function renderImage(block: ImageBlock, branding: BrandingConfig): string {
+  return `<div style="text-align:${block.align};padding:8px 0;"><img src="${block.src}" alt="${block.alt}" style="width:${block.width};border-radius:${resolveRadius(block.radius, branding, 'imageRadius')};display:inline-block;max-width:100%;height:auto;" /></div>`;
 }
 
-function renderButton(block: ButtonBlock): string {
-  return `<div style="text-align:center;margin:16px 0;"><a href="${block.href}" style="display:inline-block;background:${block.bg};color:${block.color};border-radius:${block.radius};font-size:${block.fontSize};padding:12px 28px;text-decoration:none;font-weight:600;">${block.label}</a></div>`;
+function renderButton(block: ButtonBlock, branding: BrandingConfig): string {
+  return `<div style="text-align:center;margin:16px 0;"><a href="${block.href}" style="display:inline-block;background:${block.bg};color:${block.color};border-radius:${resolveRadius(block.radius, branding, 'buttonRadius')};font-size:${block.fontSize};padding:12px 28px;text-decoration:none;font-weight:600;">${block.label}</a></div>`;
 }
 
 function renderIcon(block: IconBlock): string {
@@ -95,10 +96,10 @@ function renderSpacer(block: SpacerBlock): string {
 function renderInlineBlock(block: InlineBlock, branding: BrandingConfig): string {
   switch (block.type) {
     case 'markdown': return renderMarkdown(block, branding);
-    case 'badge':    return renderBadge(block);
-    case 'image':    return renderImage(block);
+    case 'badge':    return renderBadge(block, branding);
+    case 'image':    return renderImage(block, branding);
     case 'icon':     return renderIcon(block);
-    case 'button':   return renderButton(block);
+    case 'button':   return renderButton(block, branding);
     default: {
       const _exhaustive: never = block;
       return String(_exhaustive);
@@ -130,11 +131,24 @@ function renderSocial(block: SocialBlock): string {
 
 // ── Email shell ───────────────────────────────────────────────
 
+/**
+ * Font-family rules per typographic role (headings, quotes, code).
+ * `scope` prefixes every selector (e.g. ".mf-b" for the in-app preview).
+ */
+export function typographyCss(branding: BrandingConfig, scope = ''): string {
+  const stacks = getFontStacks(branding);
+  const sel = (tags: string[]) => tags.map(t => (scope ? `${scope} ${t}` : t)).join(',');
+  return [
+    `${sel(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'])}{font-family:${stacks.heading}}`,
+    `${sel(['blockquote'])}{font-family:${stacks.quote}}`,
+    `${sel(['code', 'pre', 'kbd'])}{font-family:${stacks.mono}}`,
+    `${sel(['pre code'])}{font-family:inherit}`,
+  ].join('\n  ');
+}
+
 function emailShell(body: string, branding: BrandingConfig, title: string): string {
   const { attribution } = APP_CONFIG;
-  const fontUrl = branding.customFontUrl.trim()
-    || `https://fonts.googleapis.com/css2?family=${branding.font}:wght@400;600;700&display=swap`;
-  const fontFamily = branding.customFontName.trim() || branding.font;
+  const fontLinks = getFontUrls(branding).map(url => `<link href="${url}" rel="stylesheet">`).join('\n');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -142,17 +156,18 @@ function emailShell(body: string, branding: BrandingConfig, title: string): stri
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
-<link href="${fontUrl}" rel="stylesheet">
+${fontLinks}
 <style>
-  body { margin:0; padding:24px 16px; background:#f0f4f8; font-family:'${fontFamily}',sans-serif; color:${branding.bodyText}; }
+  body { margin:0; padding:24px 16px; background:#f0f4f8; font-family:${getFontStacks(branding).text}; color:${branding.bodyText}; }
   .mf-frame { max-width:600px; margin:0 auto; background:${branding.bodyBg}; border-radius:10px; box-shadow:0 4px 24px rgba(0,0,0,.12); overflow:hidden; }
   .mf-body  { padding:32px; line-height:1.7; background:${branding.bodyBg}; color:${branding.bodyText}; }
   h1 { font-size:26px; margin:0 0 16px; } h2 { font-size:20px; margin:24px 0 12px; }
   h3 { font-size:16px; margin:20px 0 8px; } p { margin:0 0 16px; }
-  a  { color:${branding.linkColor}; } hr { border:none; border-top:1px solid rgba(0,0,0,0.1); margin:24px 0; }
+  a  { color:${branding.linkColor}; } hr { border:none; border-top:1px solid ${DIVIDER_COLOR}; margin:24px 0; }
+  ${typographyCss(branding)}
   img { max-width:100%; height:auto; }
   blockquote { border-left:4px solid ${branding.primaryColor}; margin:16px 0; padding:12px 16px; background:rgba(73,136,196,0.07); border-radius:0 6px 6px 0; }
-  code { background:rgba(0,0,0,0.06); padding:2px 6px; border-radius:3px; font-size:13px; font-family:monospace; }
+  code { background:rgba(0,0,0,0.06); padding:2px 6px; border-radius:3px; font-size:13px; }
   pre  { background:#1a1a2e; color:#c8dff5; padding:16px; border-radius:8px; overflow-x:auto; }
   pre code { background:none; color:inherit; padding:0; }
   ul,ol { margin:0 0 16px; padding-left:24px; } li { margin-bottom:6px; }
@@ -177,12 +192,12 @@ export function renderBlocksToEmailHtml(blocks: Block[], branding: BrandingConfi
   const bodyParts = blocks.map(block => {
     switch (block.type) {
       case 'markdown': return renderMarkdown(block, branding);
-      case 'header':   return renderHeader(block);
-      case 'footer':   return renderFooter(block);
-      case 'badge':    return renderBadge(block);
+      case 'header':   return renderHeader(block, branding);
+      case 'footer':   return renderFooter(block, branding);
+      case 'badge':    return renderBadge(block, branding);
       case 'divider':  return renderDivider(block);
-      case 'image':    return renderImage(block);
-      case 'button':   return renderButton(block);
+      case 'image':    return renderImage(block, branding);
+      case 'button':   return renderButton(block, branding);
       case 'icon':     return renderIcon(block);
       case 'font':     return renderFont(block);
       case 'spacer':   return renderSpacer(block);
@@ -206,12 +221,12 @@ export function renderBlocksToPreviewHtml(blocks: Block[], branding: BrandingCon
   return blocks.map(block => {
     switch (block.type) {
       case 'markdown': return renderMarkdown(block, branding);
-      case 'header':   return renderHeader(block);
-      case 'footer':   return renderFooter(block);
-      case 'badge':    return renderBadge(block);
+      case 'header':   return renderHeader(block, branding);
+      case 'footer':   return renderFooter(block, branding);
+      case 'badge':    return renderBadge(block, branding);
       case 'divider':  return renderDivider(block);
-      case 'image':    return renderImage(block);
-      case 'button':   return renderButton(block);
+      case 'image':    return renderImage(block, branding);
+      case 'button':   return renderButton(block, branding);
       case 'icon':     return renderIcon(block);
       case 'font':     return renderFont(block);
       case 'spacer':   return renderSpacer(block);

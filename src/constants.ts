@@ -24,6 +24,13 @@ export const FONT_LABELS: Record<string, string> = {
   'Source+Sans+3': 'Source Sans Pro',
 };
 
+/** Content padding (px) of the header / footer blocks. Drives the concentric corner rule. */
+export const HEADER_PADDING = 24;
+export const FOOTER_PADDING = 16;
+
+/** Default divider color. Always HEX so it works with <input type="color">. */
+export const DIVIDER_COLOR = '#E5E7EB';
+
 export const FONT_SIZE_MAP: Record<string, string> = {
   small: '14px',
   medium: '16px',
