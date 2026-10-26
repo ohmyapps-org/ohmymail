@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import type { BrandingConfig } from '../types';
 import { GOOGLE_FONTS, FONT_LABELS, FONT_SIZE_MAP, HEADER_PADDING, FOOTER_PADDING } from '../constants';
 import { extractFontNameFromUrl, getActiveFontFamily, getFontStacks, concentricRadius, componentRadius } from '../utils';
+import { useT } from '../lib/i18n';
 
 // Shared input style
 const INPUT: React.CSSProperties = {
@@ -46,6 +47,7 @@ function RadiusRow({ label, value, padding, previewBg, onChange }: {
   previewBg: string;
   onChange:  (v: number) => void;
 }) {
+  const t = useT();
   const outerRadius = concentricRadius(value, padding);
 
   return (
@@ -53,7 +55,7 @@ function RadiusRow({ label, value, padding, previewBg, onChange }: {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
         <div style={LABEL}>{label}</div>
         <span style={{ fontSize:10, color:'#4a7890', fontFamily:'monospace' }}>
-          {padding > 0 ? `inner ${value}px → outer ${outerRadius}px` : `${value}px`}
+          {padding > 0 ? `${t('radius.inner')} ${value}px → ${t('radius.outer')} ${outerRadius}px` : `${value}px`}
         </span>
       </div>
 
@@ -64,7 +66,7 @@ function RadiusRow({ label, value, padding, previewBg, onChange }: {
             flex:1, padding:'5px 0', border:'none', borderRadius:5, cursor:'pointer', fontSize:11, fontWeight:600,
             background: value===r ? '#1C4D8D' : 'rgba(73,136,196,0.08)',
             color:      value===r ? '#BDE8F5' : '#6a99bb',
-          }}>{r===0 ? 'None' : r===4 ? 'Slight' : r===12 ? 'Mod' : 'Round'}</button>
+          }}>{r===0 ? t('radius.none') : r===4 ? t('radius.slight') : r===12 ? t('radius.mod') : t('radius.round')}</button>
         ))}
       </div>
 
@@ -134,15 +136,16 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
   onClose:  () => void;
   visible:  boolean;
 }) {
+  const t = useT();
   const [tab, setTab] = useState<Tab>('identity');
   const set = (patch: Partial<BrandingConfig>) => onChange({ ...branding, ...patch });
 
   const tabs: { id: Tab; label: string }[] = [
-    { id:'identity', label:'Identity' },
-    { id:'header',   label:'Header'   },
-    { id:'footer',   label:'Footer'   },
-    { id:'body',     label:'Body'     },
-    { id:'corners',  label:'Corners'  },
+    { id:'identity', label:t('settings.identity') },
+    { id:'header',   label:t('settings.header')   },
+    { id:'footer',   label:t('settings.footer')   },
+    { id:'body',     label:t('settings.body')     },
+    { id:'corners',  label:'Corners'              },
   ];
 
   return (
@@ -155,7 +158,7 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
     }}>
       {/* Header */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 18px', borderBottom:'1px solid #1e3a5a', flexShrink:0 }}>
-        <span style={{ color:'#BDE8F5', fontWeight:700, fontSize:14 }}>Branding & Settings</span>
+        <span style={{ color:'#BDE8F5', fontWeight:700, fontSize:14 }}>{t('settings.title')}</span>
         <button onClick={onClose} style={{ background:'none', border:'none', color:'#6a99bb', cursor:'pointer', borderRadius:5, padding:4 }}>
           <X size={16}/>
         </button>
@@ -179,22 +182,22 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
 
         {/* ── IDENTITY ─────────────────────────────────────── */}
         {tab === 'identity' && <>
-          <Field label="Company Name">
-            <input value={branding.companyName} onChange={e => set({ companyName:e.target.value })} style={INPUT} placeholder="Acme Corp"/>
+          <Field label={t('settings.companyName')}>
+            <input value={branding.companyName} onChange={e => set({ companyName:e.target.value })} style={INPUT} placeholder={t('settings.companyNamePlaceholder')}/>
           </Field>
-          <Field label="Logo URL">
-            <input value={branding.logoUrl} onChange={e => set({ logoUrl:e.target.value })} style={INPUT} placeholder="https://example.com/logo.png"/>
+          <Field label={t('settings.logoUrl')}>
+            <input value={branding.logoUrl} onChange={e => set({ logoUrl:e.target.value })} style={INPUT} placeholder={t('settings.logoUrlPlaceholder')}/>
           </Field>
-          <ColorRow label="Accent / Primary Color" value={branding.primaryColor} onChange={v => set({ primaryColor:v })}/>
+          <ColorRow label={t('settings.accentColor')} value={branding.primaryColor} onChange={v => set({ primaryColor:v })}/>
 
           <div style={{ height:1, background:'#1e3a5a', margin:'16px 0' }}/>
 
-          <Field label="Preset Font">
+          <Field label={t('settings.presetFont')}>
             <select value={branding.font} onChange={e => set({ font:e.target.value })} style={{ ...INPUT, cursor:'pointer' }}>
               {GOOGLE_FONTS.map(f => <option key={f} value={f}>{FONT_LABELS[f]}</option>)}
             </select>
           </Field>
-          <Field label="Custom Google Font URL">
+          <Field label={t('settings.customFontUrl')}>
             <>
               <input value={branding.customFontUrl}
                 onChange={e => {
@@ -202,13 +205,13 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
                   const name = extractFontNameFromUrl(url);
                   set({ customFontUrl:url, customFontName:name });
                 }}
-                style={INPUT} placeholder="https://fonts.googleapis.com/css2?family=..."/>
-              {branding.customFontName && <div style={{ marginTop:5, fontSize:11, color:'#4d9a6e' }}>✓ Detected: {branding.customFontName}</div>}
-              {branding.customFontUrl && !branding.customFontName && <div style={{ marginTop:5, fontSize:11, color:'#d4904a' }}>Could not detect font name — enter it below</div>}
+                style={INPUT} placeholder={t('settings.customFontUrlPlaceholder')}/>
+              {branding.customFontName && <div style={{ marginTop:5, fontSize:11, color:'#4d9a6e' }}>{t('settings.fontDetected')} {branding.customFontName}</div>}
+              {branding.customFontUrl && !branding.customFontName && <div style={{ marginTop:5, fontSize:11, color:'#d4904a' }}>{t('settings.fontNotFound')}</div>}
             </>
           </Field>
-          <Field label="Custom Font Name (override)">
-            <input value={branding.customFontName} onChange={e => set({ customFontName:e.target.value })} style={INPUT} placeholder="e.g. Roboto Condensed"/>
+          <Field label={t('settings.customFontName')}>
+            <input value={branding.customFontName} onChange={e => set({ customFontName:e.target.value })} style={INPUT} placeholder={t('settings.customFontNamePlaceholder')}/>
             <div style={{ marginTop:5, fontSize:11, color:'#4a7890' }}>Without a URL, the name is loaded from Google Fonts.</div>
           </Field>
 
@@ -223,7 +226,7 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
 
           <div style={{ height:1, background:'#1e3a5a', margin:'16px 0' }}/>
 
-          <Field label="Font Size">
+          <Field label={t('settings.fontSize')}>
             <div style={{ display:'flex', gap:6 }}>
               {(['small','medium','large'] as const).map(s => (
                 <button key={s} onClick={() => set({ fontSize:s })} style={{
@@ -231,16 +234,16 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
                   background: branding.fontSize===s ? '#1C4D8D' : 'rgba(73,136,196,0.08)',
                   color:      branding.fontSize===s ? '#BDE8F5' : '#6a99bb',
                   fontSize:12, fontWeight:600, textTransform:'capitalize',
-                }}>{s}</button>
+                }}>{t(`settings.${s}`)}</button>
               ))}
             </div>
           </Field>
 
           {/* Swatch preview */}
           <div style={{ marginTop:16, padding:12, background:'rgba(73,136,196,0.07)', borderRadius:8, border:'1px solid rgba(73,136,196,0.18)' }}>
-            <div style={{ ...LABEL, marginBottom:8 }}>Preview</div>
+            <div style={{ ...LABEL, marginBottom:8 }}>{t('settings.preview')}</div>
             <div style={{ background:branding.primaryColor, color:'#fff', padding:'7px 14px', borderRadius:6, fontSize:13, fontWeight:600, textAlign:'center', marginBottom:6 }}>
-              {branding.companyName || 'Your Company'}
+              {branding.companyName || t('settings.yourCompany')}
             </div>
             <div style={{ fontSize:11, color:'#4a7890' }}>
               {getActiveFontFamily(branding)} · {branding.fontSize} · {FONT_SIZE_MAP[branding.fontSize]}
@@ -256,39 +259,39 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
 
         {/* ── HEADER ───────────────────────────────────────── */}
         {tab === 'header' && <>
-          <ColorRow label="Background Color" value={branding.headerBg} onChange={v => set({ headerBg:v })}/>
-          <ColorRow label="Text Color"        value={branding.headerText} onChange={v => set({ headerText:v })}/>
+          <ColorRow label={t('prop.background')} value={branding.headerBg} onChange={v => set({ headerBg:v })}/>
+          <ColorRow label={t('prop.textColor')} value={branding.headerText} onChange={v => set({ headerText:v })}/>
           <div style={{ fontSize:11, color:'#4a7890', marginBottom:8 }}>Corners are configured in the Corners tab.</div>
           {/* Live preview */}
           <div style={{ marginTop:12, borderRadius:`${concentricRadius(componentRadius(branding, 'headerRadius'), HEADER_PADDING)}px ${concentricRadius(componentRadius(branding, 'headerRadius'), HEADER_PADDING)}px 0 0`, background:branding.headerBg, padding:16, textAlign:'center', transition:'all 0.15s' }}>
-            <div style={{ color:branding.headerText, fontSize:14, fontWeight:700, fontFamily:getFontStacks(branding).heading }}>{branding.companyName || 'Your Company'}</div>
-            <div style={{ color:branding.headerText, fontSize:11, opacity:0.6, marginTop:2 }}>Header preview</div>
+            <div style={{ color:branding.headerText, fontSize:14, fontWeight:700, fontFamily:getFontStacks(branding).heading }}>{branding.companyName || t('settings.yourCompany')}</div>
+            <div style={{ color:branding.headerText, fontSize:11, opacity:0.6, marginTop:2 }}>{t('settings.headerPreview')}</div>
           </div>
         </>}
 
         {/* ── FOOTER ───────────────────────────────────────── */}
         {tab === 'footer' && <>
-          <ColorRow label="Background Color" value={branding.footerBg} onChange={v => set({ footerBg:v })}/>
-          <ColorRow label="Text Color"        value={branding.footerText} onChange={v => set({ footerText:v })}/>
+          <ColorRow label={t('prop.background')} value={branding.footerBg} onChange={v => set({ footerBg:v })}/>
+          <ColorRow label={t('prop.textColor')} value={branding.footerText} onChange={v => set({ footerText:v })}/>
           <div style={{ fontSize:11, color:'#4a7890', marginBottom:8 }}>Corners are configured in the Corners tab.</div>
           {/* Live preview */}
           <div style={{ marginTop:12, borderRadius:`0 0 ${concentricRadius(componentRadius(branding, 'footerRadius'), FOOTER_PADDING)}px ${concentricRadius(componentRadius(branding, 'footerRadius'), FOOTER_PADDING)}px`, background:branding.footerBg, padding:'12px 16px', textAlign:'center', transition:'all 0.15s' }}>
-            <div style={{ color:branding.footerText, fontSize:12 }}>© {new Date().getFullYear()} {branding.companyName || 'Your Company'}</div>
-            <div style={{ color:branding.footerText, fontSize:10, opacity:0.5, marginTop:3 }}>Built with MailForge by Eternum</div>
+            <div style={{ color:branding.footerText, fontSize:12 }}>© {new Date().getFullYear()} {branding.companyName || t('settings.yourCompany')}</div>
+            <div style={{ color:branding.footerText, fontSize:10, opacity:0.5, marginTop:3 }}>{t('settings.footerPreview')}</div>
           </div>
         </>}
 
         {/* ── BODY ─────────────────────────────────────────── */}
         {tab === 'body' && <>
-          <ColorRow label="Background Color" value={branding.bodyBg}   onChange={v => set({ bodyBg:v })}/>
-          <ColorRow label="Text Color"        value={branding.bodyText} onChange={v => set({ bodyText:v })}/>
-          <ColorRow label="Link Color"        value={branding.linkColor} onChange={v => set({ linkColor:v })}/>
+          <ColorRow label={t('prop.background')} value={branding.bodyBg}   onChange={v => set({ bodyBg:v })}/>
+          <ColorRow label={t('prop.textColor')} value={branding.bodyText} onChange={v => set({ bodyText:v })}/>
+          <ColorRow label={t('settings.accentColor')} value={branding.linkColor} onChange={v => set({ linkColor:v })}/>
           <div style={{ marginTop:12, background:branding.bodyBg, borderRadius:8, padding:16, border:'1px solid rgba(73,136,196,0.18)', transition:'all 0.15s' }}>
-            <div style={{ color:branding.bodyText, fontSize:15, fontWeight:700, marginBottom:6 }}>Body preview</div>
+            <div style={{ color:branding.bodyText, fontSize:15, fontWeight:700, marginBottom:6 }}>{t('settings.bodyPreview')}</div>
             <div style={{ color:branding.bodyText, fontSize:13, lineHeight:1.6, marginBottom:8 }}>
-              Paragraph text with an <a href="#" style={{ color:branding.linkColor, textDecoration:'underline' }} onClick={e => e.preventDefault()}>inline link</a>.
+              {t('settings.bodyParagraph')} <a href="#" style={{ color:branding.linkColor, textDecoration:'underline' }} onClick={e => e.preventDefault()}>{t('settings.inlineLink')}</a>.
             </div>
-            <div style={{ fontSize:12, color:branding.bodyText, opacity:0.6 }}>Font size: {FONT_SIZE_MAP[branding.fontSize]}</div>
+            <div style={{ fontSize:12, color:branding.bodyText, opacity:0.6 }}>{t('settings.fontSizeValue')} {FONT_SIZE_MAP[branding.fontSize]}</div>
           </div>
         </>}
 

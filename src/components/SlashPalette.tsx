@@ -1,12 +1,14 @@
 import { CornerDownLeft } from 'lucide-react';
 import type { SlashCommandDef, SlashCommandState } from '../types';
 import { fuzzyMatch } from '../utils';
+import { useT } from '../lib/i18n';
 
 export default function SlashPalette({ commands, state, onSelect }: {
   commands: SlashCommandDef[];
   state: SlashCommandState;
   onSelect: (cmd: SlashCommandDef) => void;
 }) {
+  const t = useT();
   const filtered = commands.filter(c => fuzzyMatch(state.query, `${c.label} ${c.description}`)).slice(0, 8);
 
   return (
@@ -18,13 +20,13 @@ export default function SlashPalette({ commands, state, onSelect }: {
       boxShadow:'0 12px 36px rgba(0,0,0,0.6)', width:288, overflow:'hidden',
     }}>
       <div style={{ padding:'5px 12px', borderBottom:'1px solid #1e3a5a', fontSize:11, color:'#5a88aa', fontFamily:'monospace', display:'flex', justifyContent:'space-between' }}>
-        <span>/{state.query || '…'}</span>
-        <span>{filtered.length} result{filtered.length !== 1 ? 's' : ''}</span>
+        <span>/{state.query || t('slash.query')}</span>
+        <span>{filtered.length} {filtered.length !== 1 ? t('slash.results') : t('slash.result')}</span>
       </div>
 
       <div style={{ maxHeight:300, overflowY:'auto' }}>
         {filtered.length === 0
-          ? <div style={{ padding:14, color:'#5a88aa', fontSize:13 }}>No commands match "{state.query}"</div>
+          ? <div style={{ padding:14, color:'#5a88aa', fontSize:13 }}>{t('slash.noMatch')} "{state.query}"</div>
           : filtered.map((cmd, i) => (
             <div key={cmd.id} onClick={() => onSelect(cmd)}
               style={{
@@ -47,7 +49,7 @@ export default function SlashPalette({ commands, state, onSelect }: {
       </div>
 
       <div style={{ padding:'4px 12px', borderTop:'1px solid #1e3a5a', fontSize:10, color:'#3a5a7a', display:'flex', gap:10 }}>
-        <span>↑↓ nav</span><span>↵ select</span><span>Esc close</span>
+        <span>{t('slash.nav')}</span><span>{t('slash.select')}</span><span>{t('slash.close')}</span>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { getCaretCoordinates, fuzzyMatch } from '../utils';
 import SlashPalette from './SlashPalette';
 import IconPickerModal from './IconPickerModal';
 import { nanoid } from 'nanoid';
+import { useT } from '../lib/i18n';
 
 interface Props {
   blocks: Block[];
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default function PureEditor({ blocks, branding, slashCommands, onBlocksChange }: Props) {
+  const t = useT();
   const [localValue,      setLocalValue]      = useState(() => serializeBlocks(blocks));
   const [slashState,      setSlashState]       = useState<SlashCommandState | null>(null);
   const [showIconPicker,  setShowIconPicker]   = useState(false);
@@ -141,8 +143,8 @@ export default function PureEditor({ blocks, branding, slashCommands, onBlocksCh
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div style={{ padding: '5px 12px', background: '#0a1e3d', borderBottom: '1px solid rgba(73,136,196,0.12)', display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
         <span style={{ fontSize: 11, color: '#4988C4', fontWeight: 700 }}>&lt;/&gt;</span>
-        <span style={{ fontSize: 11, color: '#6a99bb', fontWeight: 700, letterSpacing: '0.5px' }}>PURE MODE</span>
-        <span style={{ fontSize: 11, color: '#2a4a6a', marginLeft: 'auto' }}>/ commands · ::: blocks · Tab indent</span>
+        <span style={{ fontSize: 11, color: '#6a99bb', fontWeight: 700, letterSpacing: '0.5px' }}>{t('pure.mode')}</span>
+        <span style={{ fontSize: 11, color: '#2a4a6a', marginLeft: 'auto' }}>{t('pure.hint')}</span>
       </div>
 
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0, position: 'relative' }}>
@@ -172,7 +174,7 @@ export default function PureEditor({ blocks, branding, slashCommands, onBlocksCh
             onKeyDown={handleKeyDown}
             onScroll={syncLineScroll}
             spellCheck={false}
-            aria-label="Pure mode markdown editor"
+            aria-label={t('pure.ariaLabel')}
             style={{
               position: 'absolute', inset: 0, width: '100%', height: '100%',
               resize: 'none', border: 'none', outline: 'none',
