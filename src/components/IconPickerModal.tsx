@@ -1,15 +1,17 @@
 import { X } from 'lucide-react';
 import { ICON_PICKER_ITEMS, ICON_SVGS } from '../constants';
+import { useT } from '../lib/i18n';
 
 export default function IconPickerModal({ onSelect, onClose }: {
   onSelect: (name: string) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:9100, background:'rgba(0,0,0,0.65)', display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div onClick={e => e.stopPropagation()} style={{ background:'#12253e', border:'1px solid #2a4a6a', borderRadius:12, padding:22, width:320 }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
-          <span style={{ color:'#BDE8F5', fontWeight:700, fontSize:15 }}>Choose Icon</span>
+          <span style={{ color:'#BDE8F5', fontWeight:700, fontSize:15 }}>{t('iconPicker.title')}</span>
           <button onClick={onClose} style={{ background:'none', border:'none', color:'#6a99bb', cursor:'pointer', padding:4, borderRadius:4 }}>
             <X size={16}/>
           </button>
