@@ -6,13 +6,13 @@ import {
 
 import { APP_CONFIG, DEFAULT_BRANDING } from './config/app.config';
 import type { BrandingConfig, SlashCommandDef, SlashCommandState, Template } from './types';
-import { BRANDING_KEY, BLOCKS_KEY, TITLE_KEY, DEFAULT_CONTENT } from './constants';
+import { BRANDING_KEY, BLOCKS_KEY, TITLE_KEY, DEFAULT_CONTENT, DIVIDER_COLOR } from './constants';
 import {
-  getFromStorage, setToStorage, getActiveFontFamily, getActiveFontUrl,
+  getFromStorage, setToStorage, getFontStacks, getFontUrls,
   downloadFile,
 } from './utils';
-import { deserializeBlocks } from './utils/blockSerializer';
-import { renderBlocksToPreviewHtml, renderBlocksToEmailHtml, inlineEmailStyles } from './utils/blockRenderer';
+import { deserializeBlocks, migrateBlocks } from './utils/blockSerializer';
+import { renderBlocksToPreviewHtml, renderBlocksToEmailHtml, inlineEmailStyles, typographyCss } from './utils/blockRenderer';
 import { useToasts, useMobile, useDragResize, useTemplates, useBlocks, useEditorMode } from './hooks';
 import { buildSlashCommands } from './commands';
 
@@ -125,11 +125,19 @@ export default function OhMyMail() {
     });
   }, []);
 
+  // Text + heading/quote/mono fonts. Debounced so typing a family name doesn't fire a request per keystroke.
+  const fontUrlsKey = getFontUrls(branding).join('\n');
   useEffect(() => {
-    const id = 'mf-preview-font';
-    document.getElementById(id)?.remove();
-    document.head.appendChild(Object.assign(document.createElement('link'), { id, rel:'stylesheet', href:getActiveFontUrl(branding) }));
-  }, [branding.font, branding.customFontUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+    const timer = setTimeout(() => {
+      document.querySelectorAll('link[data-mf-preview-font]').forEach(el => el.remove());
+      fontUrlsKey.split('\n').filter(Boolean).forEach(href => {
+        const link = Object.assign(document.createElement('link'), { rel:'stylesheet', href });
+        link.dataset.mfPreviewFont = '';
+        document.head.appendChild(link);
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [fontUrlsKey]);
 
   // ── Persist branding ──────────────────────────────────────
   useEffect(() => { setToStorage(BRANDING_KEY, branding); }, [branding]);
@@ -171,7 +179,7 @@ export default function OhMyMail() {
     // Try parsing as Block[] JSON first, fall back to deserializing as markdown
     try {
       const parsed = JSON.parse(t.content);
-      if (Array.isArray(parsed)) { setBlocks(parsed); }
+      if (Array.isArray(parsed)) { setBlocks(migrateBlocks(parsed)); }
       else { setBlocks(deserializeBlocks(t.content)); }
     } catch {
       setBlocks(deserializeBlocks(t.content));
@@ -404,18 +412,18 @@ export default function OhMyMail() {
             <div style={{ flex:1, overflowY:'auto', background:'#091428', padding:'24px 16px' }}>
               <div className="mf-email-frame" style={{ maxWidth:600, margin:'0 auto', background:branding.bodyBg, borderRadius:10, boxShadow:'0 8px 40px rgba(0,0,0,0.45)', overflow:'hidden', minHeight:200 }}>
                 <div
-                  style={{ padding:'28px 36px', fontFamily:`'${getActiveFontFamily(branding)}','Inter',sans-serif`, color:branding.bodyText, lineHeight:1.7, background:branding.bodyBg }}
+                  style={{ padding:'28px 36px', fontFamily:getFontStacks(branding).text, color:branding.bodyText, lineHeight:1.7, background:branding.bodyBg }}
                   dangerouslySetInnerHTML={{ __html: `
                     <style>
-                      .mf-b h1{color:${branding.bodyText};font-size:26px;margin:0 0 16px;font-family:inherit}
-                      .mf-b h2{color:${branding.bodyText};font-size:20px;margin:24px 0 12px;font-family:inherit;opacity:0.85}
-                      .mf-b h3{color:${branding.bodyText};font-size:16px;margin:18px 0 8px;font-family:inherit;opacity:0.75}
+                      .mf-b h1{color:${branding.bodyText};font-size:26px;margin:0 0 16px}
+                      .mf-b h2{color:${branding.bodyText};font-size:20px;margin:24px 0 12px;opacity:0.85}
+                      .mf-b h3{color:${branding.bodyText};font-size:16px;margin:18px 0 8px;opacity:0.75}
                       .mf-b p{margin:0 0 14px;color:${branding.bodyText}}
                       .mf-b a{color:${branding.linkColor};text-decoration:underline}
-                      .mf-b hr{border:none;border-top:1px solid rgba(0,0,0,0.1);margin:22px 0}
+                      .mf-b hr{border:none;border-top:1px solid ${DIVIDER_COLOR};margin:22px 0}
                       .mf-b img{max-width:100%;height:auto}
                       .mf-b blockquote{border-left:4px solid ${branding.linkColor};margin:16px 0;padding:10px 16px;background:rgba(73,136,196,0.07);border-radius:0 6px 6px 0}
-                      .mf-b code{background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:3px;font-size:12px;font-family:monospace}
+                      .mf-b code{background:rgba(0,0,0,0.06);padding:2px 6px;border-radius:3px;font-size:12px}
                       .mf-b pre{background:#1a1a2e;color:#c8dff5;padding:16px;border-radius:8px;overflow-x:auto;margin:0 0 16px}
                       .mf-b pre code{background:none;color:inherit;padding:0;font-size:13px}
                       .mf-b ul,.mf-b ol{margin:0 0 14px;padding-left:22px}.mf-b li{margin-bottom:5px;color:${branding.bodyText}}
@@ -423,6 +431,7 @@ export default function OhMyMail() {
                       .mf-b th,.mf-b td{border:1px solid rgba(0,0,0,0.1);padding:7px 11px;text-align:left;color:${branding.bodyText}}
                       .mf-b th{background:rgba(0,0,0,0.04);font-weight:600}
                       .mf-b strong{font-weight:700}.mf-b em{font-style:italic}
+                      ${typographyCss(branding, '.mf-b')}
                     </style>
                     <div class="mf-b">${previewHtml}</div>
                   ` }}

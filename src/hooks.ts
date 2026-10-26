@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Block, BlockId, Template, Toast } from './types';
 import { AUTOSAVE_KEY, BLOCKS_KEY, EDITOR_MODE_KEY, TEMPLATES_KEY, TITLE_KEY } from './constants';
 import { generateId, getFromStorage, setToStorage } from './utils';
-import { deserializeBlocks } from './utils/blockSerializer';
+import { deserializeBlocks, migrateBlocks } from './utils/blockSerializer';
 
 // ── Autosave ──────────────────────────────────────────────────
 
@@ -143,7 +143,7 @@ function loadInitialBlocks(): Block[] {
   const raw = localStorage.getItem(BLOCKS_KEY);
   if (raw) {
     if (raw.trim().startsWith('[')) {
-      try { return JSON.parse(raw) as Block[]; } catch { /* fall through */ }
+      try { return migrateBlocks(JSON.parse(raw) as Block[]); } catch { /* fall through */ }
     }
     // Unlikely but handle plain string migration
     return deserializeBlocks(raw);

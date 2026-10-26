@@ -21,7 +21,8 @@ import type {
   ImageBlock, ButtonBlock, IconBlock, FontBlock, SpacerBlock,
   ColumnsBlock, SocialBlock, SocialLink,
 } from '../types';
-import { fuzzyMatch } from '../utils';
+import { fuzzyMatch, normalizeHex, resolveFooterStyle, resolveHeaderStyle, resolveRadius, componentRadius, type RadiusKey } from '../utils';
+import { DIVIDER_COLOR } from '../constants';
 import SlashPalette from './SlashPalette';
 
 interface Props {
@@ -40,12 +41,13 @@ function makeBlock(type: BlockType, branding: BrandingConfig): Block {
   const id = nanoid(8);
   switch (type) {
     case 'markdown': return { id, type, content: 'Type your **markdown** here.' };
-    case 'header':   return { id, type, logoUrl: branding.logoUrl, bg: branding.headerBg, height: 80, radius: '1rem', align: 'center' };
-    case 'footer':   return { id, type, bg: branding.footerBg, text: `© ${new Date().getFullYear()} ${branding.companyName || 'Your Company'}`, textColor: branding.footerText, radius: '0', align: 'center' as const };
-    case 'badge':    return { id, type, label: 'Badge', color: '#1D4ED8', bg: '#EFF6FF', radius: '999px', fontSize: '12px' };
-    case 'divider':  return { id, type, color: 'rgba(0,0,0,0.1)', thickness: 1, margin: '24px 0' };
-    case 'image':    return { id, type, src: 'https://placehold.co/600x200', alt: 'Image', width: '100%', align: 'center', radius: '0' };
-    case 'button':   return { id, type, label: 'Click Here', href: '#', bg: branding.primaryColor, color: '#ffffff', radius: '6px', fontSize: '15px' };
+    // bg / textColor / radius are intentionally omitted: header and footer follow the branding theme
+    case 'header':   return { id, type, logoUrl: branding.logoUrl, title: branding.companyName, height: 80, align: 'center' };
+    case 'footer':   return { id, type, text: `© ${new Date().getFullYear()} ${branding.companyName || 'Your Company'}`, align: 'center' as const };
+    case 'badge':    return { id, type, label: 'Badge', color: '#1D4ED8', bg: '#EFF6FF', fontSize: '12px' };
+    case 'divider':  return { id, type, color: DIVIDER_COLOR, thickness: 1, margin: '24px 0' };
+    case 'image':    return { id, type, src: 'https://placehold.co/600x200', alt: 'Image', width: '100%', align: 'center' };
+    case 'button':   return { id, type, label: 'Click Here', href: '#', bg: branding.primaryColor, color: '#ffffff', fontSize: '15px' };
     case 'icon':     return { id, type, name: 'star', size: 32, color: branding.primaryColor, align: 'center' };
     case 'font':     return { id, type, family: 'Inter', url: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap', target: 'all', size: '16px', weight: '400' };
     case 'spacer':   return { id, type, height: 24 };
@@ -130,7 +132,7 @@ function AddBlockButton({ afterId, branding, onAdd }: { afterId?: BlockId; brand
 
 // ── Block preview renderers ───────────────────────────────────
 
-function BlockPreview({ block, expanded, onToggleExpand }: { block: Block; expanded?: boolean; onToggleExpand?: () => void }) {
+function BlockPreview({ block, branding, expanded, onToggleExpand }: { block: Block; branding: BrandingConfig; expanded?: boolean; onToggleExpand?: () => void }) {
   switch (block.type) {
     case 'markdown': {
       const html = String(marked.parse(block.content));
@@ -152,24 +154,29 @@ function BlockPreview({ block, expanded, onToggleExpand }: { block: Block; expan
         </div>
       );
     }
-    case 'header':
+    case 'header': {
+      const h = resolveHeaderStyle(block, branding);
       return (
-        <div style={{ background: block.bg, padding: '12px', textAlign: block.align, borderRadius: block.radius, fontSize: 12 }}>
+        <div style={{ background: h.bg, padding: '12px', textAlign: block.align, borderRadius: h.radius, fontSize: 12 }}>
           {block.logoUrl
-            ? <img src={block.logoUrl} alt="Logo" style={{ height: Math.min(block.height * 0.4, 32), display: 'inline-block' }} />
+            ? <img src={block.logoUrl} alt="Logo" style={{ height: Math.min(block.height * 0.4, 32), display: 'inline-block', borderRadius: h.innerRadius }} />
             : <span style={{ color: '#aaa', fontSize: 11 }}>[Logo placeholder]</span>}
+          {block.title?.trim() && <div style={{ color: h.textColor, fontSize: 14, fontWeight: 700, marginTop: block.logoUrl ? 6 : 0 }}>{block.title}</div>}
         </div>
       );
-    case 'footer':
+    }
+    case 'footer': {
+      const f = resolveFooterStyle(block, branding);
       return (
-        <div style={{ background: block.bg, color: block.textColor, padding: '8px 12px', textAlign: block.align ?? 'center', fontSize: 11, borderRadius: block.radius ?? '0' }}>
+        <div style={{ background: f.bg, color: f.textColor, padding: '8px 12px', textAlign: block.align ?? 'center', fontSize: 11, borderRadius: f.radius }}>
           {block.text || '(footer)'}
         </div>
       );
+    }
     case 'badge':
       return (
         <div style={{ padding: '4px 0' }}>
-          <span style={{ display: 'inline-block', background: block.bg, color: block.color, borderRadius: block.radius, fontSize: block.fontSize, padding: '2px 10px', fontWeight: 600 }}>{block.label}</span>
+          <span style={{ display: 'inline-block', background: block.bg, color: block.color, borderRadius: resolveRadius(block.radius, branding, 'badgeRadius'), fontSize: block.fontSize, padding: '2px 10px', fontWeight: 600 }}>{block.label}</span>
         </div>
       );
     case 'divider':
@@ -177,13 +184,13 @@ function BlockPreview({ block, expanded, onToggleExpand }: { block: Block; expan
     case 'image':
       return (
         <div style={{ textAlign: block.align }}>
-          <img src={block.src} alt={block.alt} style={{ maxWidth: '100%', maxHeight: 80, borderRadius: block.radius, display: 'inline-block' }} />
+          <img src={block.src} alt={block.alt} style={{ maxWidth: '100%', maxHeight: 80, borderRadius: resolveRadius(block.radius, branding, 'imageRadius'), display: 'inline-block' }} />
         </div>
       );
     case 'button':
       return (
         <div style={{ textAlign: 'center' }}>
-          <span style={{ display: 'inline-block', background: block.bg, color: block.color, borderRadius: block.radius, fontSize: block.fontSize, padding: '6px 20px', fontWeight: 600 }}>{block.label}</span>
+          <span style={{ display: 'inline-block', background: block.bg, color: block.color, borderRadius: resolveRadius(block.radius, branding, 'buttonRadius'), fontSize: block.fontSize, padding: '6px 20px', fontWeight: 600 }}>{block.label}</span>
         </div>
       );
     case 'icon':
@@ -224,7 +231,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
       <label style={{ fontSize: 11, color: '#6a99bb', minWidth: 80 }}>{label}</label>
-      <input type="color" value={value} onChange={e => onChange(e.target.value)}
+      <input type="color" value={normalizeHex(value, '#000000')} onChange={e => onChange(e.target.value)}
         style={{ width: 28, height: 24, border: 'none', cursor: 'pointer', borderRadius: 4, padding: 0, background: 'none' }} />
       <input type="text" value={value} onChange={e => onChange(e.target.value)}
         style={{ flex: 1, background: 'rgba(73,136,196,0.1)', border: '1px solid rgba(73,136,196,0.2)', borderRadius: 4, padding: '3px 6px', color: '#ddeeff', fontSize: 11, fontFamily: 'monospace', outline: 'none' }} />
@@ -232,11 +239,11 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-function TextField({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
+function TextField({ label, value, onChange, type = 'text', placeholder }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
       <label style={{ fontSize: 11, color: '#6a99bb', minWidth: 80 }}>{label}</label>
-      <input type={type} value={value} onChange={e => onChange(e.target.value)}
+      <input type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)}
         style={{ flex: 1, background: 'rgba(73,136,196,0.1)', border: '1px solid rgba(73,136,196,0.2)', borderRadius: 4, padding: '3px 6px', color: '#ddeeff', fontSize: 12, outline: 'none', fontFamily: 'inherit' }} />
     </div>
   );
@@ -274,7 +281,20 @@ function TextareaField({ label, value, onChange }: { label: string; value: strin
   );
 }
 
-function BlockPropEditor({ block, update }: { block: Block; update: (patch: Partial<Omit<Block, 'id' | 'type'>>) => void }) {
+function themeRadiusHint(branding: BrandingConfig, key: RadiusKey): string {
+  return `Theme (${componentRadius(branding, key)}px)`;
+}
+
+function ThemeResetButton({ active, onReset }: { active: boolean; onReset: () => void }) {
+  if (!active) return null;
+  return (
+    <button onClick={onReset} style={{ marginBottom: 8, padding: '3px 10px', fontSize: 11, background: 'rgba(73,136,196,0.12)', border: '1px solid rgba(73,136,196,0.3)', borderRadius: 4, color: '#4988C4', cursor: 'pointer', fontFamily: 'inherit' }}>
+      Use theme colors &amp; corners
+    </button>
+  );
+}
+
+function BlockPropEditor({ block, branding, update }: { block: Block; branding: BrandingConfig; update: (patch: Partial<Omit<Block, 'id' | 'type'>>) => void }) {
   switch (block.type) {
     case 'markdown': {
       const b = block as MarkdownBlock;
@@ -282,20 +302,32 @@ function BlockPropEditor({ block, update }: { block: Block; update: (patch: Part
     }
     case 'header': {
       const b = block as HeaderBlock;
+      const h = resolveHeaderStyle(b, branding);
       return (<>
+        <ThemeResetButton
+          active={b.bg !== undefined || b.textColor !== undefined || b.radius !== undefined}
+          onReset={() => update({ bg: undefined, textColor: undefined, radius: undefined })}
+        />
         <TextField  label="Logo URL" value={b.logoUrl} onChange={v => update({ logoUrl: v })} type="url" />
-        <ColorField label="Background" value={b.bg}    onChange={v => update({ bg: v })} />
+        <TextField  label="Title"    value={b.title ?? ''} onChange={v => update({ title: v })} />
+        <ColorField label="Background" value={h.bg}    onChange={v => update({ bg: v })} />
+        <ColorField label="Text color" value={h.textColor} onChange={v => update({ textColor: v })} />
         <NumberField label="Height px" value={b.height} onChange={v => update({ height: v })} />
-        <TextField  label="Radius"    value={b.radius}  onChange={v => update({ radius: v })} />
+        <TextField  label="Radius"    value={b.radius ?? ''} placeholder={themeRadiusHint(branding, 'headerRadius')} onChange={v => update({ radius: v === '' ? undefined : v })} />
         <SelectField<HeaderBlock['align']> label="Align" value={b.align} options={['left', 'center', 'right']} onChange={v => update({ align: v })} />
       </>);
     }
     case 'footer': {
       const b = block as FooterBlock;
+      const f = resolveFooterStyle(b, branding);
       return (<>
-        <ColorField   label="Background" value={b.bg}           onChange={v => update({ bg: v })} />
-        <ColorField   label="Text color" value={b.textColor}    onChange={v => update({ textColor: v })} />
-        <TextField    label="Radius"     value={b.radius ?? '0'} onChange={v => update({ radius: v })} />
+        <ThemeResetButton
+          active={b.bg !== undefined || b.textColor !== undefined || b.radius !== undefined}
+          onReset={() => update({ bg: undefined, textColor: undefined, radius: undefined })}
+        />
+        <ColorField   label="Background" value={f.bg}           onChange={v => update({ bg: v })} />
+        <ColorField   label="Text color" value={f.textColor}    onChange={v => update({ textColor: v })} />
+        <TextField    label="Radius"     value={b.radius ?? ''} placeholder={themeRadiusHint(branding, 'footerRadius')} onChange={v => update({ radius: v === '' ? undefined : v })} />
         <SelectField<'left' | 'center' | 'right'> label="Align" value={b.align ?? 'center'} options={['left', 'center', 'right']} onChange={v => update({ align: v })} />
         <TextareaField label="Text (md)"  value={b.text}        onChange={v => update({ text: v })} />
       </>);
@@ -306,7 +338,7 @@ function BlockPropEditor({ block, update }: { block: Block; update: (patch: Part
         <TextField  label="Label"     value={b.label}    onChange={v => update({ label: v })} />
         <ColorField label="Text color" value={b.color}   onChange={v => update({ color: v })} />
         <ColorField label="Background" value={b.bg}      onChange={v => update({ bg: v })} />
-        <TextField  label="Radius"    value={b.radius}   onChange={v => update({ radius: v })} />
+        <TextField  label="Radius"    value={b.radius ?? ''} placeholder={themeRadiusHint(branding, 'badgeRadius')} onChange={v => update({ radius: v === '' ? undefined : v })} />
         <TextField  label="Font size" value={b.fontSize} onChange={v => update({ fontSize: v })} />
       </>);
     }
@@ -324,7 +356,7 @@ function BlockPropEditor({ block, update }: { block: Block; update: (patch: Part
         <TextField   label="Source URL" value={b.src}    onChange={v => update({ src: v })} type="url" />
         <TextField   label="Alt text"   value={b.alt}    onChange={v => update({ alt: v })} />
         <TextField   label="Width"      value={b.width}  onChange={v => update({ width: v })} />
-        <TextField   label="Radius"     value={b.radius} onChange={v => update({ radius: v })} />
+        <TextField   label="Radius"     value={b.radius ?? ''} placeholder={themeRadiusHint(branding, 'imageRadius')} onChange={v => update({ radius: v === '' ? undefined : v })} />
         <SelectField<ImageBlock['align']> label="Align" value={b.align} options={['left', 'center', 'right']} onChange={v => update({ align: v })} />
       </>);
     }
@@ -335,7 +367,7 @@ function BlockPropEditor({ block, update }: { block: Block; update: (patch: Part
         <TextField  label="URL"        value={b.href}     onChange={v => update({ href: v })} type="url" />
         <ColorField label="Background" value={b.bg}       onChange={v => update({ bg: v })} />
         <ColorField label="Text color" value={b.color}    onChange={v => update({ color: v })} />
-        <TextField  label="Radius"     value={b.radius}   onChange={v => update({ radius: v })} />
+        <TextField  label="Radius"     value={b.radius ?? ''} placeholder={themeRadiusHint(branding, 'buttonRadius')} onChange={v => update({ radius: v === '' ? undefined : v })} />
         <TextField  label="Font size"  value={b.fontSize} onChange={v => update({ fontSize: v })} />
       </>);
     }
@@ -463,6 +495,7 @@ function SortableCard({
         <div style={{ padding: '10px 16px', minHeight: 32 }}>
           <BlockPreview
             block={block}
+            branding={branding}
             expanded={markdownExpanded}
             onToggleExpand={() => setMarkdownExpanded(e => !e)}
           />
@@ -471,7 +504,7 @@ function SortableCard({
         {/* Inline prop editor */}
         {editing && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(73,136,196,0.12)', background: 'rgba(73,136,196,0.04)' }}>
-            <BlockPropEditor block={block} update={onUpdate}/>
+            <BlockPropEditor block={block} branding={branding} update={onUpdate}/>
           </div>
         )}
       </div>

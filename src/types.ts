@@ -19,14 +19,32 @@ export interface BrandingConfig {
   fontSize: 'small' | 'medium' | 'large';
   customFontUrl: string;
   customFontName: string;
+  /**
+   * Per-role typography. Empty name = inherit the text font.
+   * With a name only, the font is loaded from Google Fonts by name;
+   * a URL gives control over weights/styles.
+   */
+  headingFontName: string;
+  headingFontUrl: string;
+  quoteFontName: string;
+  quoteFontUrl: string;
+  monoFontName: string;
+  monoFontUrl: string;
   headerBg: string;
   headerText: string;
-  /** Inner corner radius. Outer CSS = inner + padding (concentric corners rule). */
-  headerRadius: number;
+  /** Global corner radius (px) followed by every component whose own radius is null. */
+  cornerRadius: number;
+  /**
+   * Per-component radius (px); null = follow `cornerRadius`.
+   * Header/footer: inner radius, outer CSS = inner + padding (concentric corners rule).
+   */
+  headerRadius: number | null;
   footerBg: string;
   footerText: string;
-  /** Inner corner radius. Outer CSS = inner + padding (concentric corners rule). */
-  footerRadius: number;
+  footerRadius: number | null;
+  buttonRadius: number | null;
+  badgeRadius: number | null;
+  imageRadius: number | null;
   bodyBg: string;
   bodyText: string;
   linkColor: string;
@@ -87,18 +105,23 @@ export type HeaderBlock = {
   id: BlockId;
   type: 'header';
   logoUrl: string;
-  bg: string;
+  /** Company name / title shown under the logo. */
+  title?: string;
+  /** bg, textColor and radius are overrides: when undefined they follow the branding theme. */
+  bg?: string;
+  textColor?: string;
   height: number;
-  radius: string;
+  radius?: string;
   align: 'left' | 'center' | 'right';
 };
 
 export type FooterBlock = {
   id: BlockId;
   type: 'footer';
-  bg: string;
+  /** bg, textColor and radius are overrides: when undefined they follow the branding theme. */
+  bg?: string;
   text: string;
-  textColor: string;
+  textColor?: string;
   radius?: string;
   align?: 'left' | 'center' | 'right';
 };
@@ -109,7 +132,8 @@ export type BadgeBlock = {
   label: string;
   color: string;
   bg: string;
-  radius: string;
+  /** Override; undefined follows the branding corner config. */
+  radius?: string;
   fontSize: string;
 };
 
@@ -128,7 +152,8 @@ export type ImageBlock = {
   alt: string;
   width: string;
   align: 'left' | 'center' | 'right';
-  radius: string;
+  /** Override; undefined follows the branding corner config. */
+  radius?: string;
 };
 
 export type ButtonBlock = {
@@ -138,7 +163,8 @@ export type ButtonBlock = {
   href: string;
   bg: string;
   color: string;
-  radius: string;
+  /** Override; undefined follows the branding corner config. */
+  radius?: string;
   fontSize: string;
 };
 
