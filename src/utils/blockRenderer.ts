@@ -44,7 +44,7 @@ function renderMarkdown(block: MarkdownBlock, branding: BrandingConfig): string 
 function renderHeader(block: HeaderBlock, branding: BrandingConfig): string {
   const { bg, textColor, radius, innerRadius } = resolveHeaderStyle(block, branding);
   const img = block.logoUrl
-    ? `<img src="${block.logoUrl}" alt="Logo" style="height:${block.height}px;display:inline-block;border-radius:${innerRadius};" />`
+    ? `<img src="${block.logoUrl}" alt="Logo" style="height:${block.height}px;width:auto;max-width:100%;object-fit:contain;display:inline-block;border-radius:${innerRadius};" />`
     : '';
   const title = block.title?.trim()
     ? `<div style="color:${textColor};font-family:${getFontStacks(branding).heading};font-size:22px;font-weight:700;margin-top:${img ? 8 : 0}px;">${escapeHtml(block.title.trim())}</div>`
