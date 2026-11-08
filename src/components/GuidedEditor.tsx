@@ -24,6 +24,8 @@ import type {
 import { fuzzyMatch, normalizeHex, resolveFooterStyle, resolveHeaderStyle, resolveRadius, componentRadius, type RadiusKey } from '../utils';
 import { DIVIDER_COLOR } from '../constants';
 import SlashPalette from './SlashPalette';
+import ImageLibraryModal from './ImageLibraryModal';
+import { useT } from '../lib/i18n';
 
 interface Props {
   blocks: Block[];
@@ -159,7 +161,7 @@ function BlockPreview({ block, branding, expanded, onToggleExpand }: { block: Bl
       return (
         <div style={{ background: h.bg, padding: '12px', textAlign: block.align, borderRadius: h.radius, fontSize: 12 }}>
           {block.logoUrl
-            ? <img src={block.logoUrl} alt="Logo" style={{ height: Math.min(block.height * 0.4, 32), display: 'inline-block', borderRadius: h.innerRadius }} />
+            ? <img src={block.logoUrl} alt="Logo" style={{ height: Math.min(block.height * 0.4, 32), width: 'auto', maxWidth: '100%', objectFit: 'contain', display: 'inline-block', borderRadius: h.innerRadius }} />
             : <span style={{ color: '#aaa', fontSize: 11 }}>[Logo placeholder]</span>}
           {block.title?.trim() && <div style={{ color: h.textColor, fontSize: 14, fontWeight: 700, marginTop: block.logoUrl ? 6 : 0 }}>{block.title}</div>}
         </div>
@@ -249,6 +251,19 @@ function TextField({ label, value, onChange, type = 'text', placeholder }: { lab
   );
 }
 
+function LibraryButton({ onPick }: { onPick: (url: string, name: string) => void }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginBottom: 8, paddingLeft: 88 }}>
+      <button onClick={() => setOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', fontSize: 11, background: 'rgba(73,136,196,0.12)', border: '1px solid rgba(73,136,196,0.3)', borderRadius: 4, color: '#4988C4', cursor: 'pointer', fontFamily: 'inherit' }}>
+        <ImageIcon size={12} /> {t('library.open')}
+      </button>
+      {open && <ImageLibraryModal onClose={() => setOpen(false)} onSelect={(url, name) => { onPick(url, name); setOpen(false); }} />}
+    </div>
+  );
+}
+
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -309,7 +324,8 @@ function BlockPropEditor({ block, branding, update }: { block: Block; branding: 
           onReset={() => update({ bg: undefined, textColor: undefined, radius: undefined })}
         />
         <TextField  label="Logo URL" value={b.logoUrl} onChange={v => update({ logoUrl: v })} type="url" />
-        <TextField  label="Title"    value={b.title ?? ''} onChange={v => update({ title: v })} />
+        <LibraryButton onPick={url => update({ logoUrl: url })} />
+        <TextField  label="Title"   value={b.title ?? ''} onChange={v => update({ title: v })} />
         <ColorField label="Background" value={h.bg}    onChange={v => update({ bg: v })} />
         <ColorField label="Text color" value={h.textColor} onChange={v => update({ textColor: v })} />
         <NumberField label="Height px" value={b.height} onChange={v => update({ height: v })} />
@@ -354,6 +370,7 @@ function BlockPropEditor({ block, branding, update }: { block: Block; branding: 
       const b = block as ImageBlock;
       return (<>
         <TextField   label="Source URL" value={b.src}    onChange={v => update({ src: v })} type="url" />
+        <LibraryButton onPick={(url, name) => update({ src: url, alt: b.alt || name })} />
         <TextField   label="Alt text"   value={b.alt}    onChange={v => update({ alt: v })} />
         <TextField   label="Width"      value={b.width}  onChange={v => update({ width: v })} />
         <TextField   label="Radius"     value={b.radius ?? ''} placeholder={themeRadiusHint(branding, 'imageRadius')} onChange={v => update({ radius: v === '' ? undefined : v })} />

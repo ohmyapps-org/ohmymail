@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
+import ImageLibraryModal from './ImageLibraryModal';
 import type { BrandingConfig } from '../types';
 import { GOOGLE_FONTS, FONT_LABELS, FONT_SIZE_MAP, HEADER_PADDING, FOOTER_PADDING } from '../constants';
 import { extractFontNameFromUrl, getActiveFontFamily, getFontStacks, concentricRadius, componentRadius } from '../utils';
@@ -138,6 +139,7 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
 }) {
   const t = useT();
   const [tab, setTab] = useState<Tab>('identity');
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const set = (patch: Partial<BrandingConfig>) => onChange({ ...branding, ...patch });
 
   const tabs: { id: Tab; label: string }[] = [
@@ -187,6 +189,10 @@ export default function SettingsPanel({ branding, onChange, onClose, visible }: 
           </Field>
           <Field label={t('settings.logoUrl')}>
             <input value={branding.logoUrl} onChange={e => set({ logoUrl:e.target.value })} style={INPUT} placeholder={t('settings.logoUrlPlaceholder')}/>
+            <button onClick={() => setLibraryOpen(true)} style={{ marginTop:6, display:'inline-flex', alignItems:'center', gap:5, padding:'4px 10px', fontSize:11, background:'rgba(73,136,196,0.12)', border:'1px solid rgba(73,136,196,0.3)', borderRadius:5, color:'#4988C4', cursor:'pointer', fontFamily:'inherit' }}>
+              <ImageIcon size={12}/> {t('library.open')}
+            </button>
+            {libraryOpen && <ImageLibraryModal onClose={() => setLibraryOpen(false)} onSelect={url => { set({ logoUrl:url }); setLibraryOpen(false); }}/>}
           </Field>
           <ColorRow label={t('settings.accentColor')} value={branding.primaryColor} onChange={v => set({ primaryColor:v })}/>
 

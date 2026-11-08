@@ -110,6 +110,28 @@ export const translations = {
     // Icon picker
     'iconPicker.title': 'Choose Icon',
 
+    // Image library (CDN)
+    'library.title': 'Image library',
+    'library.open': 'Library',
+    'library.url': 'Library endpoint',
+    'library.urlPlaceholder': 'https://vps-660e4a8c.tail7f613b.ts.net',
+    'library.token': 'Access token',
+    'library.tokenPlaceholder': 'Bearer token (stored in this browser)',
+    'library.connect': 'Connect',
+    'library.hint': 'cdn-panel: use a token with the assets:read scope (folder: images). Image URLs must be public.',
+    'library.connectedAs': 'Connected as',
+    'library.needsRead': 'needs assets:read',
+    'library.settings': 'Connection',
+    'library.search': 'Search images…',
+    'library.refresh': 'Refresh',
+    'library.loading': 'Loading…',
+    'library.empty': 'No images found',
+    'library.err.missing-url': 'Set the library endpoint first',
+    'library.err.unauthorized': 'Token rejected (401/403)',
+    'library.err.bad-format': 'Unexpected response: expected a JSON list of images',
+    'library.err.network': 'Could not reach the CDN (network or CORS)',
+    'library.err.http': 'CDN error',
+
     // Guided editor
     'guided.addBlock': 'Add block',
     'guided.searchBlocks': 'Search blocks…',
@@ -301,6 +323,28 @@ export const translations = {
 
     // Icon picker
     'iconPicker.title': 'Elegir Icono',
+
+    // Biblioteca de imágenes (CDN)
+    'library.title': 'Biblioteca de imágenes',
+    'library.open': 'Biblioteca',
+    'library.url': 'Endpoint de la biblioteca',
+    'library.urlPlaceholder': 'https://vps-660e4a8c.tail7f613b.ts.net',
+    'library.token': 'Token de acceso',
+    'library.tokenPlaceholder': 'Bearer token (se guarda en este navegador)',
+    'library.connect': 'Conectar',
+    'library.hint': 'cdn-panel: usá un token con el permiso assets:read (carpeta: images). Las URLs de las imágenes deben ser públicas.',
+    'library.connectedAs': 'Conectado como',
+    'library.needsRead': 'falta assets:read',
+    'library.settings': 'Conexión',
+    'library.search': 'Buscar imágenes…',
+    'library.refresh': 'Actualizar',
+    'library.loading': 'Cargando…',
+    'library.empty': 'No hay imágenes',
+    'library.err.missing-url': 'Primero configurá el endpoint de la biblioteca',
+    'library.err.unauthorized': 'Token rechazado (401/403)',
+    'library.err.bad-format': 'Respuesta inesperada: se esperaba una lista JSON de imágenes',
+    'library.err.network': 'No se pudo conectar al CDN (red o CORS)',
+    'library.err.http': 'Error del CDN',
 
     // Guided editor
     'guided.addBlock': 'Añadir bloque',
